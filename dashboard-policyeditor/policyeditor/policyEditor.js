@@ -35,9 +35,7 @@ webinos.discovery.findServices(new ServiceType('http://webinos.org/core/policyma
                         appData.applications.push(p);
                     }
 
-                    // at the moment environments are not yet supported by the
-                    // policy manager, so appData.profiles should be empty
-                    profiles = getMatch(policyString, "environment");
+                    profiles = getMatch(policyString, "profile");
                     appData.profiles = [];
                     for (var i = 0; i < profiles.length; i++) {
                         var p = {};
@@ -46,8 +44,8 @@ webinos.discovery.findServices(new ServiceType('http://webinos.org/core/policyma
                         appData.profiles.push(p);
                     }
 
-                    // the following code is a workaround to add fake environments
-                    // it has to be removed when environments will work
+                    // the following code is a workaround to add fake
+                    // environments when we don't have real ones
                     if (appData.profiles.length == 0) {
                         var p = {};
                         p.id = 1;
@@ -68,31 +66,32 @@ webinos.discovery.findServices(new ServiceType('http://webinos.org/core/policyma
                     var id = 1;
                     appData.permissions = [];
 
-                    // code to populate environments task
-                    // at the moment environments are not yet supported by the
-                    // policy manager, so we use the fake environment "Misc."
+                    // code to populate environments tab
                     for (var i = 0; i < appData.people.length; i++) {
-                        for (var j = 0; j < appData.applications.length; j ++) {
-                            for (var k = 0; k < appData.services.length; k ++) {
-                                // TODO add environments loop
-                                var p = {};
-                                p.id = id;
-                                id++;
-                                p.personId = appData.people[i].id;
-                                p.appId = appData.applications[j].id;
-                                p.serviceId = appData.services[k].id;
-                                p.name = appData.services[k].name;
-                                p.profileId = 1; // adding the fake "Misc." environment
-                                var request = {};
-                                request.subjectInfo = {};
-                                request.subjectInfo.userId = appData.people[i].name;
-                                request.widgetInfo = {};
-                                request.widgetInfo.id = appData.applications[j].name;
-                                request.resourceInfo = {};
-                                request.resourceInfo.apiFeature = appData.services[k].uri;
-                                appData.permissions.push(p);
-                                syncPermissions(+1);
-                                envEnforceRequest(policyeditor, ps, appData.permissions.length, request);
+                        for (var j = 0; j < appData.applications.length; j++) {
+                            for (var k = 0; k < appData.services.length; k++) {
+                                for (var l = 0; l < appData.profiles.length; l++) {
+                                    var p = {};
+                                    p.id = id;
+                                    id++;
+                                    p.personId = appData.people[i].id;
+                                    p.appId = appData.applications[j].id;
+                                    p.serviceId = appData.services[k].id;
+                                    p.name = appData.services[k].name;
+                                    p.profileId = appData.profiles[l].id;
+                                    var request = {};
+                                    request.subjectInfo = {};
+                                    request.subjectInfo.userId = appData.people[i].name;
+                                    request.widgetInfo = {};
+                                    request.widgetInfo.id = appData.applications[j].name;
+                                    request.resourceInfo = {};
+                                    request.resourceInfo.apiFeature = appData.services[k].uri;
+                                    request.environmentInfo = {};
+                                    request.environmentInfo.profile = appData.profiles[l].name;
+                                    appData.permissions.push(p);
+                                    syncPermissions(+1);
+                                    envEnforceRequest(policyeditor, ps, appData.permissions.length, request);
+                                }
                             }
                         }
                     }
@@ -538,6 +537,75 @@ var drawPeopleList = function() {
     // end of list.js
 };
 
+var enablePopups = function() {
+	//init
+	domObjs.popupOverlay = document.getElementById('popup_overlay');
+	domObjs.popupContainer = document.getElementById('popup_container');
+
+	//popups
+	domObjs.popupTest = document.getElementById('popup-test');
+		//domObjs.popupAddToPolicy = document.getElementById('popup-addToPolicy');
+		//domObjs.popupPolicyEntity = document.getElementById('popup-policyEntity');
+	domObjs.popupAddPermission = document.getElementById('popup-addPermission');
+	domObjs.popupAddProfile = document.getElementById('popup-addProfile');
+	domObjs.popupDeletePermission = document.getElementById('popup-deletePermission');
+	domObjs.popupDeleteProfile = document.getElementById('popup-deleteProfile');
+
+	    //buttons opening popups
+	    //document.getElementById('t-test').onclick = function() {showPopup(domObjs.popupTest)};
+		//document.getElementById('t-add').onclick = function() {showPopup(domObjs.popupAddToPolicy)};
+
+	domObjs.popupAddProfileId = document.getElementById('popup-addProfile-id');
+	domObjs.popupAddProfileName = document.getElementById('popup-addProfile-name');
+	document.getElementById('placesAddProfile').onclick = function() {profileEditPopup()};
+
+	document.getElementById('placesAddAllow').onclick = function() {permissionEditPopup('allow')};
+	document.getElementById('placesAddPrompt').onclick = function() {permissionEditPopup('prompt')};
+	document.getElementById('placesAddDeny').onclick = function() {permissionEditPopup('deny')};
+	document.getElementById('appsAddAllow').onclick = function() {permissionEditPopup('allow')};
+	document.getElementById('appsAddPrompt').onclick = function() {permissionEditPopup('prompt')};
+	document.getElementById('appsAddDeny').onclick = function() {permissionEditPopup('deny')};
+	document.getElementById('popup-deletePermission-confirm').onclick = function() {deletePermission()};
+	document.getElementById('popup-deleteProfile-confirm').onclick = function() {placesDeleteProfile()};
+
+	//buttons/elements inside popups
+	document.getElementById('popup-addProfile-save').onclick = function() {placesAddEditProfile()};
+	document.getElementById('popup-addPermission-save').onclick = function() {addEditPermission()};
+
+		//document.getElementById('popup-addToPolicy-profile').onclick = function() {policyEntityNewdit('profile')};
+		//document.getElementById('popup-addToPolicy-object').onclick = function() {policyEntityNewdit('object')};
+		//document.getElementById('popup-addToPolicy-service').onclick = function() {policyEntityNewdit('service')};
+
+	domObjs.popupAddPermissionId = document.getElementById('popup-addPermission-id');
+	domObjs.popupAddPermissionName = document.getElementById('popup-addPermission-name');
+	domObjs.popupAddPermissionApp = document.getElementById('popup-addPermission-app');
+	domObjs.popupAddPermissionType = document.getElementById('popup-addPermission-type');
+	domObjs.popupAddPermissionAction = document.getElementById('popup-addPermission-action');
+	domObjs.popupAddPermissionNameContainer = document.getElementById('popup-addPermission-name-container');
+	domObjs.popupAddPermissionAppContainer = document.getElementById('popup-addPermission-app-container');
+
+	/* policy entity edit tabs - quite verbose... but it seems like I don't need a function for anything similar to this */
+	var popupAddPermissionSummaryTab = document.getElementById('popup-addPermission-summary-tab');
+	var popupAddPermissionDetailsTab = document.getElementById('popup-addPermission-details-tab');
+	var popupAddPermissionTabs = [popupAddPermissionSummaryTab, popupAddPermissionDetailsTab];
+	domObjs.popupAddPermissionSummaryPage = document.getElementById('popup-addPermission-summary-content');
+	domObjs.popupAddPermissionDetailsPage = document.getElementById('popup-addPermission-details-content');
+
+	popupAddPermissionSummaryTab.onclick = function() {
+		selectItem(popupAddPermissionTabs, 0);
+		domObjs.popupAddPermissionSummaryPage.style.display = 'block';
+		domObjs.popupAddPermissionDetailsPage.style.display = 'none';
+	}
+	popupAddPermissionDetailsTab.onclick = function() {
+		selectItem(popupAddPermissionTabs, 1);
+		domObjs.popupAddPermissionSummaryPage.style.display = 'none';
+		domObjs.popupAddPermissionDetailsPage.style.display = 'block';
+	}
+	/* policy entity edit tabs END */
+
+}();
+
+
 var filledServicesSelection = false;
 
 function drawPlaces() {
@@ -756,12 +824,6 @@ function drawDraggablePermissions(tab) {
 		j = permissions.length;
 
 	for(i = 0; i<j; i++) {
-        console.log("==========");
-        console.log("permissions[i][permissionId]: " + permissions[i][permissionId]);
-        console.log("currentPermId: " + currentPermId);
-        console.log("permissions[i].personId: " + permissions[i].personId);
-        console.log("personId: " + personId);
-        console.log("permissions[i].perm: " + permissions[i].perm);
 		if(permissions[i][permissionId] == currentPermId && permissions[i].personId == personId) {
 			if(permissions[i].perm == 1) {
                 console.log("perm allow");
@@ -776,7 +838,6 @@ function drawDraggablePermissions(tab) {
 
 			createPermissionEntry(permissions[i], docFrag, tab);
 		}
-        console.log("==========");
 	}
 	domObjs[tab].allow.appendChild(docFragAllow);
 	domObjs[tab].prompt.appendChild(docFragPrompt);
